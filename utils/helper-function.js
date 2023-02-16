@@ -30,7 +30,6 @@ const listenToTaskCancellation = async () => {
   contract.on("AutoTaskCancelled", async (taskAddress, balance, owner) => {
     console.log("event emitted")
     console.log(balance.toString())
-    const task = await Tasks.findOne({ address: taskAddress?.toString() })
     const provider = new ethers.providers.WebSocketProvider(GOERLI_RPC_URL);
     const signer = new ethers.Wallet(task.executorkey, provider)
     // const bal = ethers.utils.formatEther(balance.toString())
@@ -43,20 +42,23 @@ const listenToTaskCancellation = async () => {
     const { gasUsed, effectiveGasPrice } = receipt
     console.log(`gas : ${gasUsed.toString()}`)
     console.log(ethers.utils.formatEther(gasUsed.mul(effectiveGasPrice)).toString())
-    await task.delete();
     console.log("done")
   })
 }
 
+let numOfChecks = 0
+
 
 const checkAutomation = async () => {
+  numOfChecks+=1;
+  console.log(`check - ${numOfChecks}`)
   const unSignedContract = await getContract(false);
   const tasks = await unSignedContract.getAllTasks();
   console.log(tasks.length)
   for (let i = 0; i < tasks.length; i++) {
     const status = await unSignedContract.getStatus(tasks[i].taskAddress)
-    console.log(`status of ${i + 1} : ${status}`)
-    if (status) {
+    console.log(`status of ${i + 1} : ${status && tasks[i].state.toString() === "0"}`)
+    if (status && tasks[i].state.toString() === "0") {
       try {
         const gasLimit = parseInt(tasks[i].gasLimit.toString())
         const id = parseInt(tasks[i].id.toString())
@@ -64,27 +66,43 @@ const checkAutomation = async () => {
         const gas = await contract.estimateGas.execute(id)
         const gasPrice = await provider.getGasPrice()
         const gasCost = gas.mul(gasPrice);
-        const price = parseFloat(ethers.utils.formatEther(gasCost).toString())
+        const price = parseFloat(ethers.utils.formatEther(gasCost).toString())*2
         const balance = parseFloat(ethers.utils.formatEther(tasks[i].funds).toString())
+        console.log(`condition : ${(parseInt(gas.toString()) < parseInt(tasks[i].gasLimit.toString())) && balance > price}`)
         if ((parseInt(gas.toString()) < parseInt(tasks[i].gasLimit.toString())) && balance > price) {
           const tx = await contract.execute(id, { gasLimit: gasLimit })
           const receipt = await tx.wait(1)
+          console.log(`https://goerli.etherscan.io/tx/${tx.hash}`)
           const { gasUsed,effectiveGasPrice } = receipt
           console.log(gasUsed.toString())
           if(gasUsed){
+              const task = await Tasks.findOne({address:tasks[i].taskAddress.toString()})
+            const execution = {
+              amount: parseFloat(ethers.utils.formatEther(gasUsed.mul(effectiveGasPrice)).toString()),
+              hash : tx.hash.toString(),
+              time:Date.now()
+            }
+            task.executions = [...task.executions,execution]
+            await task.save()
+            const fee = ethers.utils.parseEther("0.0001")
             const amount = gasUsed.mul(effectiveGasPrice)
-            const tx1 = await contract.updateTaskExecDetails(id,amount,{gasLimit:100000})
+            const total = amount.add(fee)
+            const tx1 = await contract.updateTaskExecDetails(id,total,{gasLimit:2500000})
             const rec = await tx1.wait(1)
-            console.log(rec.gasUsed.toString())
+            console.log(`Done ${rec.gasUsed.toString()}`)
           }
+         
         }
 
       } catch (error) {
         console.log(error)
       }
     }
+ 
   }
-  checkAutomation()
+  setTimeout(() => {
+    checkAutomation()
+  },60000)
 }
 
 module.exports = { listenToTaskCancellation, checkAutomation }
