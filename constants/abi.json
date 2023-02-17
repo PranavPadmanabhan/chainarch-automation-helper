@@ -231,9 +231,9 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_taskAddress",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
       }
     ],
     "name": "cancelAutomation",
@@ -252,11 +252,6 @@
         "internalType": "uint256",
         "name": "_gasLimit",
         "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "executor",
-        "type": "address"
       }
     ],
     "name": "createAutomation",
