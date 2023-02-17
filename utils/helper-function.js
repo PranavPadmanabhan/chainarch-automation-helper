@@ -31,6 +31,7 @@ const listenToTaskCancellation = async () => {
     console.log("event emitted")
     console.log(balance.toString())
     const provider = new ethers.providers.WebSocketProvider(GOERLI_RPC_URL);
+    const task = await Tasks.findOne({address:taskAddress.toString()})
     const signer = new ethers.Wallet(task.executorkey, provider)
     // const bal = ethers.utils.formatEther(balance.toString())
     const gasPrice = await provider.getGasPrice()
