@@ -5,6 +5,7 @@ const Tasks = require("../models/Tasks");
 const newTask = async(req,res) => {
     res.setHeader('Content-Type','application/json');
     if(req.body.address && req.body.abi,req.body.taskName){
+      try {
         const wallet = new ethers.Wallet.createRandom()
         const privateKey = wallet.privateKey.toString()
         const newTask = new Tasks({
@@ -22,6 +23,9 @@ const newTask = async(req,res) => {
             address:task.address,
             _id:task._id
         })
+      } catch (error) {
+        res.status(400).json({error:"something went wrong"})
+      }
     }
     else {
         res.status(400).json({error:"something went wrong"})
@@ -30,8 +34,13 @@ const newTask = async(req,res) => {
 
 const deleteTask = async(req,res) => {
     if(req.query.address){
-     await Tasks.deleteOne({address:req.query.address})
+     try {
+        await Tasks.deleteOne({address:req.query.address})
      res.status(200).json({message:"Done"})
+     } catch (error) {
+        res.status(400).json({error:"error"})
+        
+     }
     }
     else {
         res.status(400).json({error:"error"})
@@ -41,7 +50,8 @@ const deleteTask = async(req,res) => {
 const getExecutions = async(req,res) => {
     res.setHeader('Content-Type','application/json');
     if(req.query.id || req.query.address){
-        let task;
+        try {
+            let task;
         if(req.query.id){
             task = await Tasks.findById(req.query.id);
         }
@@ -49,6 +59,10 @@ const getExecutions = async(req,res) => {
             task = await Tasks.findOne({address:req.query.address});
         }
         res.status(200).json(task)
+        } catch (error) {
+        res.status(400).json({error:"error"})
+            
+        }
     }
     else {
         res.status(400).json({error:"error"})

@@ -28,6 +28,7 @@ const listenToTaskCancellation = async () => {
   const contract = await getContract(true)
 
   contract.on("AutoTaskCancelled", async (taskAddress, balance, owner) => {
+   try {
     console.log("event emitted")
     console.log(balance.toString())
     const provider = new ethers.providers.WebSocketProvider(GOERLI_RPC_URL);
@@ -44,6 +45,9 @@ const listenToTaskCancellation = async () => {
     console.log(`gas : ${gasUsed.toString()}`)
     console.log(ethers.utils.formatEther(gasUsed.mul(effectiveGasPrice)).toString())
     console.log("done")
+   } catch (error) {
+    console.log(error)
+   }
   })
 }
 
